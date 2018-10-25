@@ -1,4 +1,4 @@
-# Pytorch implementation of One-Shot Unsupervised Cross Domain Translation ([arxiv](https://arxiv.org/abs/1806.06029)).
+# Pytorch extension of One-Shot Unsupervised Cross Domain Translation ([arxiv](https://arxiv.org/abs/1806.06029)).
 
 Prerequisites
 --------------

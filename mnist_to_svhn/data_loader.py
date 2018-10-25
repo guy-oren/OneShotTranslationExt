@@ -30,22 +30,22 @@ def get_loader(config):
     mnist_test = datasets.MNIST(root=config.mnist_path, download=True, transform=transform_test, train=False)
 
     svhn_loader = torch.utils.data.DataLoader(dataset=svhn,
-                                              batch_size=config.batch_size,
+                                              batch_size=config.svhn_batch_size,
                                               shuffle=config.shuffle,
                                               num_workers=config.num_workers)
 
     mnist_loader = torch.utils.data.DataLoader(dataset=mnist,
-                                               batch_size=config.batch_size,
+                                               batch_size=config.mnist_batch_size,
                                                shuffle=config.shuffle,
                                                num_workers=config.num_workers)
 
     svhn_test_loader = torch.utils.data.DataLoader(dataset=svhn_test,
-                                                   batch_size=config.batch_size,
+                                                   batch_size=config.svhn_batch_size,
                                                    shuffle=False,
                                                    num_workers=config.num_workers)
 
     mnist_test_loader = torch.utils.data.DataLoader(dataset=mnist_test,
-                                                    batch_size=config.batch_size,
+                                                    batch_size=config.mnist_batch_size,
                                                     shuffle=False,
                                                     num_workers=config.num_workers)
 

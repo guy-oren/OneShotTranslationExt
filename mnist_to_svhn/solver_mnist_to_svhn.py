@@ -26,7 +26,7 @@ class Solver(object):
         self.g_conv_dim = config.g_conv_dim
         self.d_conv_dim = config.d_conv_dim
         self.train_iters = config.train_iters
-        self.batch_size = config.batch_size
+        self.mnist_batch_size = config.mnist_batch_size
         self.lr = config.lr
         self.kl_lambda = config.kl_lambda
         self.log_step = config.log_step
@@ -60,7 +60,7 @@ class Solver(object):
 
     def merge_images(self, sources, targets, k=10):
         _, _, h, w = sources.shape
-        row = int(np.sqrt(self.batch_size)) + 1
+        row = int(np.sqrt(self.mnist_batch_size)) + 1
         merged = np.zeros([3, row * h, row * w * 2])
         for idx, (s, t) in enumerate(zip(sources, targets)):
             i = idx // row
@@ -108,7 +108,7 @@ class Solver(object):
 
         svhn_iter = iter(self.svhn_loader)
         mnist_iter = iter(self.mnist_loader)
-        iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
+        # iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
 
         # fixed mnist and svhn for sampling
         svhn_fixed_data, svhn_fixed_labels = svhn_iter.next()
@@ -118,27 +118,37 @@ class Solver(object):
 
         for step in range(self.train_iters + 1):
 
-            # reset data_iter for each epoch
-            if (step + 1) % iter_per_epoch == 0:
-                mnist_iter = iter(self.mnist_loader)
-                svhn_iter = iter(self.svhn_loader)
+            # # reset data_iter for each epoch
+            # if (step + 1) % iter_per_epoch == 0:
+            #     mnist_iter = iter(self.mnist_loader)
+            #     svhn_iter = iter(self.svhn_loader)
 
             # load svhn and mnist dataset
-            svhn_data, s_labels_data = svhn_iter.next()
-            mnist_data, m_labels_data = mnist_iter.next()
+            try:
+                svhn_data, s_labels_data = svhn_iter.next()
+            except StopIteration:
+                svhn_iter = iter(self.svhn_loader)
+                svhn_data, s_labels_data = svhn_iter.next()
+
+            try:
+                mnist_data, m_labels_data = mnist_iter.next()
+            except StopIteration:
+                mnist_iter = iter(self.mnist_loader)
+                mnist_data, m_labels_data = mnist_iter.next()
+
             svhn, s_labels = self.to_var(svhn_data), self.to_var(s_labels_data).long().squeeze()
             mnist, m_labels = self.to_var(mnist_data), self.to_var(m_labels_data)
 
             # This sets the maximum number of items for A domain
             # We assume max_items is a multiple of batch_size
             # And reset mnist loader when we pass the number of allowed items.
-            if self.batch_size > self.config.max_items:
+            if self.mnist_batch_size > self.config.max_items:
                 exit(-1)
-            elif self.batch_size == self.config.max_items:
+            elif self.mnist_batch_size == self.config.max_items:
                 mnist = fixed_mnist
-            elif self.batch_size < self.config.max_items:
+            elif self.mnist_batch_size < self.config.max_items:
                 counter += 1
-                if counter * self.batch_size >= self.config.max_items:
+                if counter * self.mnist_batch_size >= self.config.max_items:
                     mnist_iter = iter(self.mnist_loader)
                     counter = 0
 
@@ -241,4 +251,6 @@ class Solver(object):
                     torch.save(self.d1.state_dict(), d1_path)
                     torch.save(self.d2.state_dict(), d2_path)
 
-                return
+                # return
+        del self.mnist_loader
+        del self.svhn_loader
