@@ -1,6 +1,63 @@
 import torch
 from torchvision import datasets
 from torchvision import transforms
+from PIL import Image
+import numpy as np
+import copy
+
+
+AUGMENTATION_TRANSFORM_SIZE = 2
+
+
+class CustomSVHN(datasets.SVHN):
+    def __init__(self, root, use_augmentation=True, split='train',
+                 transform=None, target_transform=None, download=False):
+        super(CustomSVHN, self).__init__(root, split, transform, target_transform, download)
+        self.use_augmentation = use_augmentation
+        self.transform = copy.deepcopy(transform)
+
+        if self.transform is not None:
+            if self.use_augmentation:
+                for _ in range(AUGMENTATION_TRANSFORM_SIZE):
+                    self.transform.transforms.pop(0)
+
+    def __getitem__(self, index):
+        img, target = super(CustomSVHN, self).__getitem__(index)
+
+        orig_img = self.data[index]
+        orig_img = Image.fromarray(np.transpose(orig_img, (1, 2, 0)))
+
+        if self.transform is not None:
+            orig_img = self.transform(orig_img)
+
+        return orig_img, img, target
+
+
+class CustomMNIST(datasets.MNIST):
+    def __init__(self, root, use_augmentation=True, train=True, transform=None, target_transform=None, download=False):
+        super(CustomMNIST, self).__init__(root, train, transform, target_transform, download)
+        self.use_augmentation = use_augmentation
+        self.transform = copy.deepcopy(transform)
+
+        if self.transform is not None:
+            if self.use_augmentation:
+                for _ in range(AUGMENTATION_TRANSFORM_SIZE):
+                    self.transform.transforms.pop(0)
+
+    def __getitem__(self, index):
+        img, target = super(CustomMNIST, self).__getitem__(index)
+
+        if self.train:
+            orig_img = self.train_data[index]
+        else:
+            orig_img = self.test_data[index]
+
+        orig_img = Image.fromarray(orig_img.numpy(), mode='L')
+
+        if self.transform is not None:
+            orig_img = self.transform(orig_img)
+
+        return orig_img, img, target
 
 
 def get_loader(config):
@@ -11,6 +68,8 @@ def get_loader(config):
     if config.use_augmentation:
         transform_list.append(transforms.RandomHorizontalFlip())
         transform_list.append(transforms.RandomRotation(0.1))
+
+    AUGMENTATION_TRANSFORM_SIZE = len(transform_list)
 
     transform_list.append(transforms.Scale(config.image_size))
     transform_list.append(transforms.ToTensor())
@@ -23,8 +82,10 @@ def get_loader(config):
 
     transform_train = transforms.Compose(transform_list)
 
-    svhn = datasets.SVHN(root=config.svhn_path, download=True, transform=transform_train, split='train')
-    mnist = datasets.MNIST(root=config.mnist_path, download=True, transform=transform_train, train=True)
+    svhn = CustomSVHN(root=config.svhn_path, use_augmentation=config.use_augmentation, download=True,
+                      transform=transform_train, split='train')
+    mnist = CustomMNIST(root=config.mnist_path, use_augmentation=config.use_augmentation, download=True,
+                        transform=transform_train, train=True)
 
     svhn_test = datasets.SVHN(root=config.svhn_path, download=True, transform=transform_test, split='test')
     mnist_test = datasets.MNIST(root=config.mnist_path, download=True, transform=transform_test, train=False)

@@ -110,8 +110,8 @@ class Solver(object):
         # iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
 
         # fixed mnist and svhn for sampling
-        svhn_fixed_data, svhn_fixed_labels = svhn_iter.next()
-        mnist_fixed_data, mnist_fixed_labels = mnist_iter.next()
+        svhn_fixed_data, _, svhn_fixed_labels = svhn_iter.next()
+        mnist_fixed_data, _, mnist_fixed_labels = mnist_iter.next()
         fixed_svhn = self.to_var(svhn_fixed_data)
         counter = 0
 
@@ -124,16 +124,16 @@ class Solver(object):
 
             # load svhn and mnist dataset
             try:
-                svhn_data, s_labels_data = svhn_iter.next()
+                _, svhn_data, s_labels_data = svhn_iter.next()
             except Exception:
                 svhn_iter = iter(self.svhn_loader)
-                svhn_data, s_labels_data = svhn_iter.next()
+                _, svhn_data, s_labels_data = svhn_iter.next()
 
             try:
-                mnist_data, m_labels_data = mnist_iter.next()
+                _, mnist_data, m_labels_data = mnist_iter.next()
             except Exception:
                 mnist_iter = iter(self.mnist_loader)
-                mnist_data, m_labels_data = mnist_iter.next()
+                _, mnist_data, m_labels_data = mnist_iter.next()
 
             svhn, s_labels = self.to_var(svhn_data), self.to_var(s_labels_data).long().squeeze()
             mnist, m_labels = self.to_var(mnist_data), self.to_var(m_labels_data)
