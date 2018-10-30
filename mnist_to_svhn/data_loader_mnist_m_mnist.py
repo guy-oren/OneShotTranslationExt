@@ -4,33 +4,10 @@ from torchvision import transforms
 from PIL import Image
 import numpy as np
 import copy
+import os
 
 
 AUGMENTATION_TRANSFORM_SIZE = 2
-
-
-class CustomSVHN(datasets.SVHN):
-    def __init__(self, root, use_augmentation=True, split='train',
-                 transform=None, target_transform=None, download=False):
-        super(CustomSVHN, self).__init__(root, split, transform, target_transform, download)
-        self.use_augmentation = use_augmentation
-        self.transform = copy.deepcopy(transform)
-
-        if self.transform is not None:
-            if self.use_augmentation:
-                for _ in range(AUGMENTATION_TRANSFORM_SIZE):
-                    self.transform.transforms.pop(0)
-
-    def __getitem__(self, index):
-        img, target = super(CustomSVHN, self).__getitem__(index)
-
-        orig_img = self.data[index]
-        orig_img = Image.fromarray(np.transpose(orig_img, (1, 2, 0)))
-
-        if self.transform is not None:
-            orig_img = self.transform(orig_img)
-
-        return orig_img, img, target
 
 
 class CustomMNIST(datasets.MNIST):
@@ -82,32 +59,32 @@ def get_loader(config):
 
     transform_train = transforms.Compose(transform_list)
 
-    svhn = CustomSVHN(root=config.svhn_path, use_augmentation=config.use_augmentation, download=True,
-                      transform=transform_train, split='train')
     mnist = CustomMNIST(root=config.mnist_path, use_augmentation=config.use_augmentation, download=True,
                         transform=transform_train, train=True)
 
-    svhn_test = datasets.SVHN(root=config.svhn_path, download=True, transform=transform_test, split='test')
-    mnist_test = datasets.MNIST(root=config.mnist_path, download=True, transform=transform_test, train=False)
+    mnist_m = datasets.ImageFolder(root=os.path.join(config.mnist_m_path, "train"), transform=transform_train)
 
-    svhn_loader = torch.utils.data.DataLoader(dataset=svhn,
-                                              batch_size=config.svhn_batch_size,
-                                              shuffle=config.shuffle,
-                                              num_workers=config.num_workers)
+    mnist_test = datasets.MNIST(root=config.mnist_path, download=True, transform=transform_test, train=False)
+    mnist_m_test = datasets.ImageFolder(root=os.path.join(config.mnist_m_path, "test"), transform=transform_test)
 
     mnist_loader = torch.utils.data.DataLoader(dataset=mnist,
                                                batch_size=config.mnist_batch_size,
                                                shuffle=config.shuffle,
                                                num_workers=config.num_workers)
 
-    svhn_test_loader = torch.utils.data.DataLoader(dataset=svhn_test,
-                                                   batch_size=config.svhn_batch_size,
-                                                   shuffle=False,
-                                                   num_workers=config.num_workers)
+    mnist_m_loader = torch.utils.data.DataLoader(dataset=mnist_m,
+                                                 batch_size=config.mnist_m_batch_size,
+                                                 shuffle=config.shuffle,
+                                                 num_workers=config.num_workers)
 
     mnist_test_loader = torch.utils.data.DataLoader(dataset=mnist_test,
                                                     batch_size=config.mnist_batch_size,
                                                     shuffle=False,
                                                     num_workers=config.num_workers)
 
-    return svhn_loader, mnist_loader, svhn_test_loader, mnist_test_loader
+    mnist_m_test_loader = torch.utils.data.DataLoader(dataset=mnist_m_test,
+                                                      batch_size=config.mnist_m_batch_size,
+                                                      shuffle=False,
+                                                      num_workers=config.num_workers)
+
+    return mnist_m_loader, mnist_loader, mnist_m_test_loader, mnist_test_loader

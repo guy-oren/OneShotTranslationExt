@@ -1,10 +1,9 @@
 import argparse
-import logging
 import os
-
-from data_loader_svhn_mnist import get_loader
-from solver_svhn_to_mnist import Solver
 from torch.backends import cudnn
+
+from solver_autoencoder_svhn_mnist import Solver
+from data_loader_svhn_mnist import get_loader
 
 
 def str2bool(v):
@@ -23,17 +22,8 @@ def main(config):
     if not os.path.exists(config.sample_path):
         os.makedirs(config.sample_path)
 
-    base = config.log_path
-    filename = os.path.join(base, str(config.max_items))
-    if not os.path.isdir(base):
-        os.mkdir(base)
-    logging.basicConfig(filename=filename, level=logging.DEBUG)
-
     if config.mode == 'train':
         solver.train()
-
-    elif config.mode == 'sample':
-        solver.sample()
 
 
 if __name__ == '__main__':
@@ -46,9 +36,9 @@ if __name__ == '__main__':
     parser.add_argument('--num_classes', type=int, default=10)
 
     # training hyper-parameters
-    parser.add_argument('--train_iters', type=int, default=40000)
+    parser.add_argument('--train_iters', type=int, default=15000)
     parser.add_argument('--mnist_batch_size', type=int, default=64)
-    parser.add_argument('--svhn_batch_size', type=int, default=1)
+    parser.add_argument('--svhn_batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0002)
     parser.add_argument('--beta1', type=float, default=0.5)
@@ -57,27 +47,14 @@ if __name__ == '__main__':
 
     # misc
     parser.add_argument('--mode', type=str, default='train')
+    parser.add_argument('--model_path', type=str, default='./models_autoencoder')
+    parser.add_argument('--sample_path', type=str, default='./samples_autoencoder')
     parser.add_argument('--mnist_path', type=str, default='./mnist')
     parser.add_argument('--svhn_path', type=str, default='./svhn')
     parser.add_argument('--log_step', type=int, default=10)
-    parser.add_argument('--shuffle', type=bool, default=True)
-
-    parser.add_argument('--load_iter', type=int, default=10000)
     parser.add_argument('--sample_step', type=int, default=500)
-    parser.add_argument('--num_averaging_runs', type=int, default=1000)
-    parser.add_argument('--num_iters_save_model_and_return', type=int, default=5000)
-    parser.add_argument('--num_d_iterations', type=int, default=1)
-    parser.add_argument('--num_g_iterations', type=int, default=1)
-    parser.add_argument('--model_path', type=str, default='./models_ost')
-    parser.add_argument('--sample_path', type=str, default='./samples_ost')
-    parser.add_argument('--load_path', type=str, default='./models_autoencoder')
-    parser.add_argument('--log_path', type=str, default='logs_ost')
-    parser.add_argument('--pretrained_g', required=True, type=str2bool)
-    parser.add_argument('--save_models_and_samples', required=True, type=str2bool)
+    parser.add_argument('--shuffle', type=bool, default=True)
     parser.add_argument('--use_augmentation', required=True, type=str2bool)
-    parser.add_argument('--one_way_cycle', required=True, type=str2bool)
-    parser.add_argument('--freeze_shared', required=True, type=str2bool)
-    parser.add_argument('--max_items', type=int, default=1)
 
     config = parser.parse_args()
     print(config)

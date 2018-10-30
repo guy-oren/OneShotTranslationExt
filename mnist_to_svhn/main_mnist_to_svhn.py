@@ -3,7 +3,7 @@ import logging
 import os
 from torch.backends import cudnn
 
-from data_loader import get_loader
+from data_loader_svhn_mnist import get_loader
 from solver_mnist_to_svhn import Solver
 
 

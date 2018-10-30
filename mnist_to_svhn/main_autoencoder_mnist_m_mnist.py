@@ -3,7 +3,7 @@ import os
 from torch.backends import cudnn
 
 from solver_autoencoder import Solver
-from data_loader import get_loader
+from data_loader_mnist_m_mnist import get_loader
 
 
 def str2bool(v):
@@ -11,7 +11,7 @@ def str2bool(v):
 
 
 def main(config):
-    svhn_loader, mnist_loader, svhn_test_loader, mnist_test_loader = get_loader(config)
+    mnist_m_loader, mnist_loader, mnist_m_test_loader, mnist_test_loader = get_loader(config)
 
     solver = Solver(config, svhn_loader, mnist_loader)
     cudnn.benchmark = True

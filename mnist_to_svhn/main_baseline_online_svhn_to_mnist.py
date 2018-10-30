@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 
-from data_loader import get_loader
+from data_loader_svhn_mnist import get_loader
 from solver_baseline_online_svhn_to_mnist import Solver
 from torch.backends import cudnn
 
@@ -84,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('--one_way_cycle', required=True, type=str2bool)
     parser.add_argument('--freeze_shared', required=True, type=str2bool)
     parser.add_argument('--online_iter', type=int, default=1)
+    parser.add_argument('--cherry_pick', type=str2bool, default=False)
 
     config = parser.parse_args()
     print(config)
