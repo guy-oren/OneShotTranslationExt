@@ -6,13 +6,13 @@ import torch
 from torch import optim
 from torch.autograd import Variable
 
-from model import D1, D2
-from model import G11, G22
+from model_mnist_m_mnist import D1, D2
+from model_mnist_m_mnist import G11, G22
 
 
 class Solver(object):
-    def __init__(self, config, svhn_loader, mnist_loader):
-        self.svhn_loader = svhn_loader
+    def __init__(self, config, mnist_m_loader, mnist_loader):
+        self.mnist_m_loader = mnist_m_loader
         self.mnist_loader = mnist_loader
         self.g11 = None
         self.g22 = None
@@ -88,12 +88,12 @@ class Solver(object):
         return encoding_loss
 
     def train(self):
-        svhn_iter = iter(self.svhn_loader)
+        mnist_m_iter = iter(self.mnist_m_loader)
         mnist_iter = iter(self.mnist_loader)
-        iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
+        iter_per_epoch = min(len(mnist_m_iter), len(mnist_iter))
 
         # fixed mnist and svhn for sampling
-        fixed_svhn = self.to_var(svhn_iter.next()[0])
+        fixed_mnist_m = self.to_var(mnist_m_iter.next()[0])
         fixed_mnist = self.to_var(mnist_iter.next()[0])
 
         # Train autoencoder for mnist
@@ -136,14 +136,14 @@ class Solver(object):
             g_loss = torch.mean((out - 1) ** 2)
             g_loss += torch.mean((mnist - fake_mnist) ** 2)
             em = self.g11.encode(mnist)
-            g_loss += self.kl_lambda * self._compute_kl(em)
+            g_loss += self.kl_lambda * self._compute_kl(em) # from UNIT code, the std is 0 because we dont sample
 
             g_loss.backward()
             self.g_optimizer.step()
 
             # print the log info
             if (step + 1) % self.log_step == 0:
-                print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
+                print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_fake_loss: %.4f, '
                       'g_loss: %.4f'
                       % (step + 1, self.train_iters, d_real_loss.data[0], d_mnist_loss.data[0],
                          d_fake_loss.data[0], g_loss.data[0]))
@@ -165,26 +165,26 @@ class Solver(object):
                 torch.save(self.g11.state_dict(), g11_path)
                 torch.save(self.d1.state_dict(), d1_path)
 
-        # Train autoencoder for svhn
+        # Train autoencoder for mnist_m
         for step in range(self.train_iters + 1):
             # reset data_iter for each epoch
             if (step + 1) % iter_per_epoch == 0:
-                svhn_iter = iter(self.svhn_loader)
+                mnist_m_iter = iter(self.mnist_m_loader)
 
-            # load svhn and mnist dataset
-            svhn_data, s_labels_data = svhn_iter.next()
-            svhn, s_labels = self.to_var(svhn_data), self.to_var(s_labels_data).long().squeeze()
+            # load mnist_m
+            mnist_m_data, mm_labels_data = mnist_m_iter.next()
+            mnist_m, mm_labels = self.to_var(mnist_m_data), self.to_var(mm_labels_data).long().squeeze()
 
             # ============ train D ============#
 
             # train with real images
             self.reset_grad()
 
-            fake_svhn = self.g22.forward(svhn)
-            out = self.d2(fake_svhn)
+            fake_mnist_m = self.g22.forward(mnist_m)
+            out = self.d2(fake_mnist_m)
             d2_loss = torch.mean((out - 1) ** 2)
 
-            d_svhn_loss = d2_loss
+            d_mnist_m_loss = d2_loss
             d_real_loss = d2_loss
             d_real_loss.backward()
             self.d_optimizer.step()
@@ -192,8 +192,8 @@ class Solver(object):
             # train with fake images
             self.reset_grad()
 
-            fake_svhn = self.g22.forward(svhn)
-            out = self.d2(fake_svhn)
+            fake_mnist_m = self.g22.forward(mnist_m)
+            out = self.d2(fake_mnist_m)
             d1_loss = torch.mean(out ** 2)
 
             d_fake_loss = d1_loss
@@ -203,11 +203,11 @@ class Solver(object):
             # ============ train G ============#
 
             self.reset_grad()
-            fake_svhn = self.g22.forward(svhn)
-            out = self.d2(fake_svhn)
+            fake_mnist_m = self.g22.forward(mnist_m)
+            out = self.d2(fake_mnist_m)
             g_loss = torch.mean((out - 1) ** 2)
-            g_loss += torch.mean((svhn - fake_svhn) ** 2)
-            es = self.g22.encode(svhn)
+            g_loss += torch.mean((mnist_m - fake_mnist_m) ** 2)
+            es = self.g22.encode(mnist_m)
             g_loss += self.kl_lambda * self._compute_kl(es)
 
             g_loss.backward()
@@ -215,17 +215,17 @@ class Solver(object):
 
             # print the log info
             if (step + 1) % self.log_step == 0:
-                print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f,'
+                print('Step [%d/%d], d_real_loss: %.4f, d_mnist_m_loss: %.4f,'
                       'd_fake_loss: %.4f, g_loss: %.4f'
                       % (step + 1, self.train_iters, d_real_loss.data[0],
-                         d_svhn_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))
+                         d_mnist_m_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))
 
             # save the sampled images
             if (step + 1) % self.sample_step == 0:
-                fake_svhn = self.g22.forward(fixed_svhn)
-                svhn, fake_svhn = self.to_data(fixed_svhn), self.to_data(fake_svhn)
+                fake_mnist_m = self.g22.forward(fixed_mnist_m)
+                mnist_m, fake_mnist_m = self.to_data(fixed_mnist_m), self.to_data(fake_mnist_m)
 
-                merged = self.merge_images(svhn, fake_svhn)
+                merged = self.merge_images(mnist_m, fake_mnist_m)
                 path = os.path.join(self.sample_path, 'sample-%d-s-m.png' % (step + 1))
                 scipy.misc.imsave(path, merged)
                 print('saved %s' % path)

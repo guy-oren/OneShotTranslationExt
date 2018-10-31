@@ -6,8 +6,8 @@ import torch
 from torch import optim
 from torch.autograd import Variable
 
-from model import D1, D2
-from model import G11, G22
+from model_svhn_mnist import D1, D2
+from model_svhn_mnist import G11, G22
 
 
 class Solver(object):

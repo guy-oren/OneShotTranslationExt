@@ -2,7 +2,7 @@ import argparse
 import os
 from torch.backends import cudnn
 
-from solver_autoencoder import Solver
+from solver_autoencoder_mnist_m_mnist import Solver
 from data_loader_mnist_m_mnist import get_loader
 
 
@@ -13,7 +13,7 @@ def str2bool(v):
 def main(config):
     mnist_m_loader, mnist_loader, mnist_m_test_loader, mnist_test_loader = get_loader(config)
 
-    solver = Solver(config, svhn_loader, mnist_loader)
+    solver = Solver(config, mnist_m_loader, mnist_loader)
     cudnn.benchmark = True
 
     # create directories if not exist
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # training hyper-parameters
     parser.add_argument('--train_iters', type=int, default=15000)
     parser.add_argument('--mnist_batch_size', type=int, default=64)
-    parser.add_argument('--svhn_batch_size', type=int, default=64)
+    parser.add_argument('--mnist_m_batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0002)
     parser.add_argument('--beta1', type=float, default=0.5)
@@ -47,10 +47,10 @@ if __name__ == '__main__':
 
     # misc
     parser.add_argument('--mode', type=str, default='train')
-    parser.add_argument('--model_path', type=str, default='./models_autoencoder')
-    parser.add_argument('--sample_path', type=str, default='./samples_autoencoder')
+    parser.add_argument('--model_path', type=str, default='./models_autoencoder_mnist_m_mnist')
+    parser.add_argument('--sample_path', type=str, default='./samples_autoencoder_mnist_m_mnist')
     parser.add_argument('--mnist_path', type=str, default='./mnist')
-    parser.add_argument('--svhn_path', type=str, default='./svhn')
+    parser.add_argument('--mnist_m_path', type=str, default='./mnist_m')
     parser.add_argument('--log_step', type=int, default=10)
     parser.add_argument('--sample_step', type=int, default=500)
     parser.add_argument('--shuffle', type=bool, default=True)

@@ -6,8 +6,8 @@ import torch
 from torch import optim
 from torch.autograd import Variable
 
-from model import D1, D2
-from model import G11
+from model_svhn_mnist import D1, D2
+from model_svhn_mnist import G11
 
 
 class Solver(object):
@@ -170,13 +170,13 @@ class Solver(object):
 
             # train with fake images
             self.reset_grad()
-            es = self.g11.encode(svhn, svhn=True)
+            es = self.g11.encode(svhn, mnist_m=True)
             fake_mnist = self.g11.decode(es)
             out = self.d1(fake_mnist)
             d2_loss = torch.mean(out ** 2)
 
             em = self.g11.encode(mnist)
-            fake_svhn = self.g11.decode(em, svhn=True)
+            fake_svhn = self.g11.decode(em, mnist_m=True)
             out = self.d2(fake_svhn)
             d1_loss = torch.mean(out ** 2)
 
@@ -188,13 +188,13 @@ class Solver(object):
 
             # train mnist-svhn-mnist cycle
             self.reset_grad()
-            es = self.g11.encode(svhn, svhn=True)
+            es = self.g11.encode(svhn, mnist_m=True)
             fake_mnist = self.g11.decode(es)
             out = self.d1(fake_mnist)
             g_loss = torch.mean((out - 1) ** 2)
 
             em = self.g11.encode(mnist)
-            fake_svhn = self.g11.decode(em, svhn=True)
+            fake_svhn = self.g11.decode(em, mnist_m=True)
             out = self.d2(fake_svhn)
             g_loss += torch.mean((out - 1) ** 2)
 
@@ -205,8 +205,8 @@ class Solver(object):
 
             if self.config.one_way_cycle:
                 em = self.g11.encode(mnist)
-                fake_svhn = self.g11.decode(em, svhn=True)
-                es = self.g11.encode(fake_svhn, svhn=True)
+                fake_svhn = self.g11.decode(em, mnist_m=True)
+                es = self.g11.encode(fake_svhn, mnist_m=True)
                 fake_mnist = self.g11.decode(es)
                 g_loss += torch.mean((mnist - fake_mnist) ** 2)
 
@@ -215,8 +215,8 @@ class Solver(object):
 
             if not self.config.freeze_shared:
                 self.reset_grad()
-                es = self.g11.encode(svhn, svhn=True)
-                fake_es = self.g11.decode(es, svhn=True)
+                es = self.g11.encode(svhn, mnist_m=True)
+                fake_es = self.g11.decode(es, mnist_m=True)
                 g_loss = torch.mean((svhn - fake_es) ** 2)
                 g_loss += self.kl_lambda * self._compute_kl(es)
 
@@ -233,7 +233,7 @@ class Solver(object):
             # save the sampled images
             if (step + 1) % self.sample_step == 0:
                 em = self.g11.encode(fixed_mnist)
-                fake_svhn_var = self.g11.decode(em, svhn=True)
+                fake_svhn_var = self.g11.decode(em, mnist_m=True)
                 fake_svhn = self.to_data(fake_svhn_var)
                 if self.config.save_models_and_samples:
                     merged = self.merge_images(mnist_fixed_data, fake_svhn)
