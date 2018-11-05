@@ -26,7 +26,8 @@ class Solver(object):
         self.g_conv_dim = config.g_conv_dim
         self.d_conv_dim = config.d_conv_dim
         self.train_iters = config.train_iters
-        self.batch_size = config.batch_size
+        self.mnist_batch_size = config.mnist_batch_size
+        self.mnist_m_batch_size = config.mnist_m_batch_size
         self.lr = config.lr
         self.log_step = config.log_step
         self.sample_step = config.sample_step
@@ -55,8 +56,8 @@ class Solver(object):
             self.d2.cuda()
 
     def merge_images(self, sources, targets, k=10):
-        _, _, h, w = sources.shape
-        row = int(np.sqrt(self.batch_size))
+        batch_size, _, h, w = sources.shape
+        row = int(np.sqrt(batch_size))
         merged = np.zeros([3, row * h, row * w * 2])
         for idx, (s, t) in enumerate(zip(sources, targets)):
             i = idx // row
@@ -103,7 +104,7 @@ class Solver(object):
                 mnist_iter = iter(self.mnist_loader)
 
             # mnist dataset
-            mnist_data, m_labels_data = mnist_iter.next()
+            _, mnist_data, m_labels_data = mnist_iter.next()
             mnist, m_labels = self.to_var(mnist_data), self.to_var(m_labels_data)
 
             # ============ train D ============#

@@ -2,9 +2,15 @@ import argparse
 import logging
 import os
 
-from data_loader_svhn_mnist import get_loader
-from solver_svhn_to_mnist_fixed import Solver
+from data_loader_mnist_m_mnist import get_loader
+from solver_baseline_online_mnist_to_mnist_m import Solver
 from torch.backends import cudnn
+
+"""
+    Online experiment for baseline:
+        We adapt the generator for each sample seperatley in a succesive manner - given x1,x2, ..., xn
+        we train for x1, than for x and so on
+"""
 
 
 def str2bool(v):
@@ -12,9 +18,9 @@ def str2bool(v):
 
 
 def main(config):
-    svhn_loader, mnist_loader, svhn_test_loader, mnist_test_loader = get_loader(config)
+    mnist_m_loader, mnist_loader, mnist_m_test_loader, mnist_test_loader = get_loader(config)
 
-    solver = Solver(config, svhn_loader, mnist_loader)
+    solver = Solver(config, mnist_m_loader, mnist_loader)
     cudnn.benchmark = True
 
     # create directories if not exist
@@ -24,7 +30,7 @@ def main(config):
         os.makedirs(config.sample_path)
 
     base = config.log_path
-    filename = os.path.join(base, str(config.max_items))
+    filename = os.path.join(base, str(config.online_iter))
     if not os.path.isdir(base):
         os.mkdir(base)
     logging.basicConfig(filename=filename, level=logging.DEBUG)
@@ -47,8 +53,8 @@ if __name__ == '__main__':
 
     # training hyper-parameters
     parser.add_argument('--train_iters', type=int, default=40000)
-    parser.add_argument('--mnist_batch_size', type=int, default=64)
-    parser.add_argument('--svhn_batch_size', type=int, default=1)
+    parser.add_argument('--mnist_batch_size', type=int, default=1)
+    parser.add_argument('--mnist_m_batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0002)
     parser.add_argument('--beta1', type=float, default=0.5)
@@ -58,7 +64,7 @@ if __name__ == '__main__':
     # misc
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--mnist_path', type=str, default='./mnist')
-    parser.add_argument('--svhn_path', type=str, default='./svhn')
+    parser.add_argument('--mnist_m_path', type=str, default='./mnist_m')
     parser.add_argument('--log_step', type=int, default=10)
     parser.add_argument('--shuffle', type=bool, default=True)
 
@@ -68,17 +74,17 @@ if __name__ == '__main__':
     parser.add_argument('--num_iters_save_model_and_return', type=int, default=5000)
     parser.add_argument('--num_d_iterations', type=int, default=1)
     parser.add_argument('--num_g_iterations', type=int, default=1)
-    parser.add_argument('--model_path', type=str, default='./models_ost')
+    parser.add_argument('--model_path', type=str, default='./models_mnist_mnist_m_ost')
     parser.add_argument('--sample_path', type=str, default='./samples_ost')
-    parser.add_argument('--load_path', type=str, default='./models_autoencoder')
+    parser.add_argument('--load_path', type=str, default='./models_autoencoder_mnist_m_mnist')
     parser.add_argument('--log_path', type=str, default='logs_ost')
     parser.add_argument('--pretrained_g', required=True, type=str2bool)
     parser.add_argument('--save_models_and_samples', required=True, type=str2bool)
     parser.add_argument('--use_augmentation', required=True, type=str2bool)
     parser.add_argument('--one_way_cycle', required=True, type=str2bool)
     parser.add_argument('--freeze_shared', required=True, type=str2bool)
-    parser.add_argument('--max_items', type=int, default=1)
-    parser.add_argument('--cherry_pick', type=bool, default=False)
+    parser.add_argument('--online_iter', type=int, default=1)
+    #parser.add_argument('--cherry_pick', type=str2bool, default=False)
 
     config = parser.parse_args()
     print(config)

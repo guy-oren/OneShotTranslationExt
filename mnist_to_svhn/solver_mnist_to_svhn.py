@@ -102,6 +102,8 @@ class Solver(object):
         return encoding_loss
 
     def train(self):
+        raise Exception("Need to fix generator bug")
+
         self.build_model()
         if self.config.pretrained_g:
             self.g11.load_state_dict(torch.load(self.g11_load_path))

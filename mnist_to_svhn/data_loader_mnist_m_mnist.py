@@ -62,6 +62,7 @@ def get_loader(config):
     mnist = CustomMNIST(root=config.mnist_path, use_augmentation=config.use_augmentation, download=True,
                         transform=transform_train, train=True)
 
+    # TODO: I should custom this dataset also to get the orig image before augmentation
     mnist_m = datasets.ImageFolder(root=os.path.join(config.mnist_m_path, "train"), transform=transform_train)
 
     mnist_test = datasets.MNIST(root=config.mnist_path, download=True, transform=transform_test, train=False)

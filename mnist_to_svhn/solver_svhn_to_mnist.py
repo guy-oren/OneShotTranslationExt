@@ -7,7 +7,7 @@ from torch import optim
 from torch.autograd import Variable
 
 from model_svhn_mnist import D1, D2
-from model_svhn_mnist import G22
+from model_svhn_mnist import G11
 
 
 class Solver(object):
@@ -41,10 +41,10 @@ class Solver(object):
 
     def build_model(self):
         """Builds a generator and a discriminator."""
-        self.g22 = G22(conv_dim=self.g_conv_dim)
-        self.g_optimizer = optim.Adam(list(self.g22.encode_params()) + list(self.g22.decode_params()), self.lr,
+        self.g11 = G11(conv_dim=self.g_conv_dim)
+        self.g_optimizer = optim.Adam(list(self.g11.encode_params()) + list(self.g11.decode_params()), self.lr,
                                       [self.beta1, self.beta2])
-        self.unshared_optimizer = optim.Adam(list(self.g22.unshared_parameters()), self.lr,
+        self.unshared_optimizer = optim.Adam(list(self.g11.unshared_parameters()), self.lr,
                                              [self.beta1, self.beta2])
 
         self.d1 = D1(conv_dim=self.d_conv_dim, use_labels=False)
@@ -54,7 +54,7 @@ class Solver(object):
                                       [self.beta1, self.beta2])
 
         if torch.cuda.is_available():
-            self.g22.cuda()
+            self.g11.cuda()
             self.d1.cuda()
             self.d2.cuda()
 
@@ -103,7 +103,7 @@ class Solver(object):
     def train(self):
         self.build_model()
         if self.config.pretrained_g:
-            self.g22.load_state_dict(torch.load(self.g22_load_path))
+            self.g11.load_state_dict(torch.load(self.g11_load_path))
 
         svhn_iter = iter(self.svhn_loader)
         mnist_iter = iter(self.mnist_loader)
@@ -169,15 +169,15 @@ class Solver(object):
 
             # train with fake images
             self.reset_grad()
-            es = self.g22.encode(svhn)
-            fake_mnist = self.g22.decode(es, mnist=True)
+            es = self.g11.encode(svhn, svhn=True)
+            fake_mnist = self.g11.decode(es)
             out = self.d1(fake_mnist)
-            d2_loss = torch.mean(out ** 2)
-
-            em = self.g22.encode(mnist, mnist=True)
-            fake_svhn = self.g22.decode(em)
-            out = self.d2(fake_svhn)
             d1_loss = torch.mean(out ** 2)
+
+            em = self.g11.encode(mnist)
+            fake_svhn = self.g11.decode(em, svhn=True)
+            out = self.d2(fake_svhn)
+            d2_loss = torch.mean(out ** 2)
 
             d_fake_loss = d2_loss + d1_loss
             d_fake_loss.backward()
@@ -186,26 +186,26 @@ class Solver(object):
             # ============ train G ============#
 
             self.reset_grad()
-            es = self.g22.encode(svhn)
-            fake_mnist = self.g22.decode(es, mnist=True)
+            es = self.g11.encode(svhn, svhn=True)
+            fake_mnist = self.g11.decode(es)
             out = self.d1(fake_mnist)
             g_loss = torch.mean((out - 1) ** 2)
 
-            em = self.g22.encode(mnist, mnist=True)
-            fake_svhn = self.g22.decode(em)
+            em = self.g11.encode(mnist)
+            fake_svhn = self.g11.decode(em, svhn=True)
             out = self.d2(fake_svhn)
             g_loss += torch.mean((out - 1) ** 2)
 
             self.reset_grad()
-            es = self.g22.encode(svhn)
-            fake_svhn = self.g22.decode(es)
+            es = self.g11.encode(svhn, svhn=True)
+            fake_svhn = self.g11.decode(es, svhn=True)
             g_loss += torch.mean((svhn - fake_svhn) ** 2)
 
             if self.config.one_way_cycle:
-                es = self.g22.encode(svhn)
-                fake_mnist = self.g22.decode(es, mnist=True)
-                es = self.g22.encode(fake_mnist, mnist=True)
-                fake_svhn = self.g22.decode(es)
+                es = self.g11.encode(svhn, svhn=True)
+                fake_mnist = self.g11.decode(es)
+                es = self.g11.encode(fake_mnist)
+                fake_svhn = self.g11.decode(es, svhn=True)
                 g_loss += torch.mean((svhn - fake_svhn) ** 2)
 
             g_loss.backward()
@@ -213,8 +213,8 @@ class Solver(object):
 
             if not self.config.freeze_shared:
                 self.reset_grad()
-                em = self.g22.encode(mnist, mnist=True)
-                fake_em = self.g22.decode(em, mnist=True)
+                em = self.g11.encode(mnist)
+                fake_em = self.g11.decode(em)
                 g_loss = torch.mean((mnist - fake_em) ** 2)
                 g_loss += self.kl_lambda * self._compute_kl(em)
 
@@ -230,8 +230,8 @@ class Solver(object):
 
             # save the sampled images
             if (step + 1) % self.sample_step == 0:
-                es = self.g22.encode(fixed_svhn)
-                fake_mnist_var = self.g22.decode(es, mnist=True)
+                es = self.g11.encode(fixed_svhn, svhn=True)
+                fake_mnist_var = self.g11.decode(es)
                 fake_mnist = self.to_data(fake_mnist_var)
                 if self.config.save_models_and_samples:
                     merged = self.merge_images(svhn_fixed_data, fake_mnist)
@@ -242,10 +242,10 @@ class Solver(object):
             if (step + 1) % self.config.num_iters_save_model_and_return == 0:
                 # save the model parameters for each epoch
                 if self.config.save_models_and_samples:
-                    g22_path = os.path.join(self.model_path, 'g22-%d.pkl' % (step + 1))
+                    g11_path = os.path.join(self.model_path, 'g11-%d.pkl' % (step + 1))
                     d1_path = os.path.join(self.model_path, 'd1-%d.pkl' % (step + 1))
                     d2_path = os.path.join(self.model_path, 'd2-%d.pkl' % (step + 1))
-                    torch.save(self.g22.state_dict(), g22_path)
+                    torch.save(self.g11.state_dict(), g11_path)
                     torch.save(self.d1.state_dict(), d1_path)
                     torch.save(self.d2.state_dict(), d2_path)
 
